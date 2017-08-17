@@ -1,7 +1,7 @@
-function yprime = mechanical_ode(t,y,q,xn,dx,dt,D1,D2,D2bd,A_pos,A_pos_0,...
+function yprime = mechanical_ode(t,y,q,xn,dx,dt,D1,D2,D2bd_D,D2bd_N,A_pos,A_pos_0,...
     A_pos_1,A_neg,A_neg_0,A_neg_1,xint)
 
-     t
+%      t
 
     n = y(1:xn);
     rho = y(xn+1:2*xn);
@@ -9,8 +9,12 @@ function yprime = mechanical_ode(t,y,q,xn,dx,dt,D1,D2,D2bd,A_pos,A_pos_0,...
     
     
 %     solve for v, which also gives us du/dt
-    v = -1/q(1)*(D2 + D2bd)\(q(2)*((D1*rho).*(D1*u) + (rho).*(D2*u)) + ...
-        q(3)*((D1*rho).*n + rho.*(D1*n)) - q(6)*rho.*n);
+    v = 1/q(2)*(D2 + D2bd_D)\(q(5)*rho.*n - D2*u - ...
+        D1*(q(3)*rho.*n./(1+q(4)*n.^2)));
+    
+    %BC
+    v(end) = 0;
+%     v(1) = v(2);
     
     %where is velocity positive, negative
     
@@ -95,9 +99,9 @@ function yprime = mechanical_ode(t,y,q,xn,dx,dt,D1,D2,D2bd,A_pos,A_pos_0,...
     Axn_rho = A_neg(sigma(rho_r_en),sigma(rho_r_wn),ve(x_int_n),vw(x_int_n),x_int_n,1);
     
     %final derivative calculations
-    dndt = (q(5)*D2 - 1/dx*(Axp_n + Axn_n))*n;
+    dndt = (D2 + D2bd_N - 1/dx*(Axp_n + Axn_n) + sparse(1:xn,1:xn,1-n,xn,xn))*n;
     
-    drhodt = q(4)*n - 1/dx*(Axp_rho + Axn_rho)*rho;
+    drhodt =  -1/dx*(Axp_rho + Axn_rho)*rho;
     
     yprime = [dndt ; drhodt ; v];
 
