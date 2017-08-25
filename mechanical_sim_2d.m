@@ -42,17 +42,6 @@ xy_int = 1:yn*xn;
 xy_int(bd) = [];
 
 
-%extra bound for sensors -- sensing second, second to last points from
-%INTERIOR points.
-y_bd_1_int = y_bd_0 + xn;
-y_bd_nm1_int = y_bd_l - xn;
-
-x_bd_1_int = y_bd_0 + 1;
-x_bd_nm1_int = x_bd_l - 1;
-
-
-
-
 %%%% Using this to model base model from Tranquillo-Murray 1992. Something
 %%%% still wrong with my boundary conditions, apparently. When s small,
 %%%% results look somewhat similar (but s = 1 in their paper..)
@@ -65,7 +54,7 @@ nu = .75;
 gamma = 1;
 s = .01;
 
-q = [mu1,mu2,E,nu,s,tau,gamma];
+q = [mu1,mu2,E,nu,s,tau,gamma,r0];
 
 %initial conditions
 
@@ -82,36 +71,39 @@ UIC = [nIC ; rhoIC ; uIC];
 %define matrices for operations
 %first order derivative
 
-D1X = @(ind) 1/(2*dx)*sparse([ind ind],...
-    [ind+1 ind-1],[ones(1,length(ind)) -ones(1,length(ind))],2*total,2*total);
+D1X = @(ind,n) 1/(2*dx)*sparse([ind ind],...
+    [ind+1 ind-1],[ones(1,length(ind)) -ones(1,length(ind))],n,n);
 
-D1Y = @(ind) 1/(2*dy)*sparse([ind ind],...
-    [ind+xn ind-xn],[ones(1,length(ind)) -ones(1,length(ind))],2*total,2*total);
+D1Y = @(ind,n) 1/(2*dy)*sparse([ind ind],...
+    [ind+xn ind-xn],[ones(1,length(ind)) -ones(1,length(ind))],n,n);
 
 %%%%need something for boundary (currently using 0 at all boundary points
 %%%%in 1d)
 
 %second order derivative for velocity computation
-D2X = @(ind) 1/dx^2*sparse([ind ind ind],...
+D2X = @(ind,n) 1/dx^2*sparse([ind ind ind],...
     [ind+1 ind ind-1],...
-    [ones(1,length(ind)) -2*ones(1,length(ind)) ones(1,length(ind))],2*total,2*total); %%-2 2 -2 2
+    [ones(1,length(ind)) -2*ones(1,length(ind)) ones(1,length(ind))],n,n); %%-2 2 -2 2
 
-D2Y = @(ind) 1/dy^2*sparse([ind ind ind],[ind+xn ind ind-xn],...
-    [ones(1,length(ind)) -2*ones(1,length(ind)) ones(1,length(ind))],2*total,2*total); %%-2 2 -2 2
+D2Y = @(ind,n) 1/dy^2*sparse([ind ind ind],[ind+xn ind ind-xn],...
+    [ones(1,length(ind)) -2*ones(1,length(ind)) ones(1,length(ind))],n,n); %%-2 2 -2 2
 
-D2XY = @(ind1,ind2) 1/(4*dx*dy)*sparse([ind1 ind1 ind1 ind1],...
+D2XY = @(ind1,ind2,n) 1/(4*dx*dy)*sparse([ind1 ind1 ind1 ind1],...
     [ind2+xn+1 ind2+1-xn ind2-1+xn ind2-1-xn],...
-    [ones(1,length(ind1)) -1*ones(1,2*length(ind1)) ones(1,length(ind1))],2*total,2*total); %%-2 2 -2 2
+    [ones(1,length(ind1)) -1*ones(1,2*length(ind1)) ones(1,length(ind1))],n,n); %%-2 2 -2 2
 
 
-D2bd_D = @(ind) sparse(ind,ind,ones(length(ind),1),2*total,2*total);
+D2bd_D = @(ind,n) sparse(ind,ind,ones(length(ind),1),n,n);
 
 
-v = velocity_solve(q,D1X,D1Y,D2X,D2Y,D2XY,D2bd_D,rhoIC,nIC,repmat(uIC,2,1)...
-    ,xy_int,bd,total);
+D2Xbd_N = @(ind0,ind1,n) sparse([ind0 ind0 ind1 ind1],[ind0 ind0+1 ind1-1 ind1]...
+    ,[-2*ones(1,length(ind0)) 2*ones(1,length(ind0)) 2*ones(1,length(ind1))...
+    -2*ones(1,length(ind1))],n,n);
 
 
-D2bd_N = sparse([1 1 xn xn],[1 2 xn-1 xn],[-2 2 2 -2],total,total);
+D2Ybd_N = @(ind0,ind1,n) sparse([ind0 ind0 ind1 ind1],[ind0 ind0+xn ind1-xn ind1]...
+    ,[-2*ones(1,length(ind0)) 2*ones(1,length(ind0)) 2*ones(1,length(ind1))...
+    -2*ones(1,length(ind1))],n,n);
 
 % Matrices for advection with flux limiters
 
@@ -135,8 +127,9 @@ A_neg_0 = @(se,ve,ind,dn) sparse([ind ind],[ind ind+dn],[ve.*se/2; (ve-ve.*se/2)
 
 tic
 
-[t,U] = ode15s(@(t,y) mechanical_ode_TM_base_w_BC(t,y,q,xn,dx,dt,D1,D2,D2bd_D,D2bd_N,A_pos,A_pos_0,...
-    A_pos_1,A_neg,A_neg_0,A_neg_1,xint),t,UIC);
+[t,U] = ode15s(@(t,y) mechanical_ode_TM_base_2d(t,y,q,dx,dy,D1X,D1Y,D2X,D2Y,D2XY,...
+    D2bd_D,D2Xbd_N,D2Ybd_N,A_pos,A_pos_0,A_pos_1,A_neg,A_neg_0,A_neg_1,xy_int,bd,x_bd_0,x_bd_l,...
+    y_bd_0,y_bd_l,total,x_int,y_int,xn),t,UIC);
 
 toc
 
