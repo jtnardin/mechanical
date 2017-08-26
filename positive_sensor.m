@@ -19,17 +19,14 @@ function [r_e,r_w] = positive_sensor(u,int,int_row_1,step)
     r_e = (u(int) - u(int-step))./(u(int+step) - u(int));    
     
     
-    %%%%%%%%%%%%% 8 - 25 need to update this prtion, which is making r_w
-    %%%%%%%%%%%%% too large.
-    
-    %now remove interior points that will sample incorrectly before
-    %calculating r_w
-    int(int_row_1) = [];
+    %only consider the points that will sample correctly (which is anything
+    %not in the first row)
+    int_past_row_1 = ~int_row_1;
 
     
-    %For r_w, compute most points as normal (recall the problem points were
-    %removed from int)
-    r_w(int) = (u(int-step) - u(int-2*step))./(u(int) - u(int-step));
+    %For r_w, compute most points as normal
+    r_w(int_past_row_1) = (u(int(int_past_row_1)-step) - u(int(int_past_row_1)-2*step))./...
+        (u(int(int_past_row_1)) - u(int(int_past_row_1)-step));
         
     %and now fix points that would have sampled incorrectly
     %we are currently assuming a zero neumann BC

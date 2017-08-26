@@ -1,8 +1,8 @@
 clear all; clc
 
 %define grids
-xn = 41;
-yn = 11;
+xn = 21;
+yn = 21;
 total = xn*yn;
 
 x = linspace(-1,1,xn);
@@ -11,7 +11,7 @@ y = linspace(0,1,yn);
 dx = x(2)-x(1);
 dy = y(2)-y(1);
 dt = 1e-3;
-t = 0:dt:4;
+t = 0:dt:1;
 tn = length(t);
 [Y,X] = meshgrid(y,x);
 
@@ -50,11 +50,12 @@ mu1 = 1;
 mu2 = 1;
 tau = 1/2;
 E = 1;
-nu = .75;
+nu = .25;
 gamma = 1;
-s = .01;
+s = 1;
+D = 0.1;
 
-q = [mu1,mu2,E,nu,s,tau,gamma,r0];
+q = [mu1,mu2,E,nu,s,tau,gamma,r0,D];
 
 %initial conditions
 
@@ -65,7 +66,7 @@ rhoIC = rhoIC(:);
 uIC = zeros(size(X));
 uIC = uIC(:);
 %vector of all entries
-UIC = [nIC ; rhoIC ; uIC];
+UIC = [nIC ; rhoIC ; repmat(uIC,2,1)];
 
 
 %define matrices for operations
@@ -129,77 +130,80 @@ tic
 
 [t,U] = ode15s(@(t,y) mechanical_ode_TM_base_2d(t,y,q,dx,dy,D1X,D1Y,D2X,D2Y,D2XY,...
     D2bd_D,D2Xbd_N,D2Ybd_N,A_pos,A_pos_0,A_pos_1,A_neg,A_neg_0,A_neg_1,xy_int,bd,x_bd_0,x_bd_l,...
-    y_bd_0,y_bd_l,total,x_int,y_int,xn),t,UIC);
+    y_bd_0,y_bd_l,total,x_int,y_int,xn,yn),t,UIC);
 
 toc
 
-v = diff(U(:,2*xn+1:end))/dt;
-
-%video
-% %     
-% figure
-% hold on
-% 
-% dt_plot = floor(length(t)/200);
-% 
-% for i = 1:199
-% %     subplot(2,2,1)
-%     hold off
-%     plot(x,U(i*dt_plot,1:xn))
-%     hold on
-%     plot(x,v(i*dt_plot,:));
-%     title(num2str(t(i*dt_plot)))
-%     
-% %     subplot(2,2,2)
-% %     hold off
-%     plot(x,U(i*dt_plot,xn+1:2*xn))
-% %     hold on
-% %     plot(x,v(10*i+1,:));
-%     
-% %     subplot(2,2,3)
-%     plot(x,U(i*dt_plot,2*xn+1:3*xn))
-%     
-%     axis([x(1) 1 -.3 1.3])
-%     pause(.25)
-%     
-%     
-% end
+tn = length(t);
 
 
-%subplot
-figure('unit','normalized','outerposition',[0 0 1 1])
+%%%%%%%% plot
 
-dt_plot = floor(length(t)/4);
+%extract each variable to its matrix (t,x,y)
+n = reshape(U(:,1:total),tn,xn,yn);
+rho = reshape(U(:,total+1:2*total),tn,xn,yn);
+ux = reshape(U(:,2*total+1:3*total),tn,xn,yn);
+uy = reshape(U(:,3*total+1:4*total),tn,xn,yn);
+vx = diff(ux,1)/dt;
+vy = diff(uy,1)/dt;
 
-subplot(2,2,1)
-hold on
 
-for i = 1:dt_plot:length(t)
-    plot(x,U(i,1:xn),'b')
+figure('units','normalized','outerposition',[0 0 1 1])
+
+for i = 1:10:tn-1
+   subplot(2,2,1)
+
+   
+   hold off
+   contourf(Y,X,squeeze(n(i,:,:)),'edgecolor','none')
+%    view(2)
+   xlabel('y')
+   ylabel('x')
+   title(['cells, t = ' num2str(t(i))])
+   
+   caxis([0 1])
+   colorbar
+
+   hold on
+   
+   quiver(Y,X,squeeze(vy(i,:,:)),squeeze(vx(i,:,:)),'linewidth',2,'color','r');
+   
+   subplot(2,2,2)
+   
+   contourf(Y,X,squeeze(rho(i,:,:)),'edgecolor','none')
+   view(2)
+   xlabel('y')
+   ylabel('x')
+   title(['collagen, t = ' num2str(t(i))])
+   
+   
+%    caxis([min(min(min(rho))) max(max(max(rho)))]);
+   colorbar
+   
+   subplot(2,2,3)
+   
+   contourf(Y,X,squeeze(ux(i,:,:)),'edgecolor','none')
+   view(2)
+   xlabel('y')
+   ylabel('x')
+   title(['ux, t = ' num2str(t(i))])
+   
+   
+   caxis([min(min(min(ux))) max(max(max(ux)))]);
+   colorbar
+   
+   subplot(2,2,4)
+   
+   contourf(Y,X,squeeze(uy(i,:,:)),'edgecolor','none')
+   view(2)
+   xlabel('y')
+   ylabel('x')
+   title(['uy, t = ' num2str(t(i))])
+   
+   
+   caxis([min(min(min(uy))) max(max(max(uy)))]);
+   colorbar
+   
+   pause(.125)
+    
 end
-
-xlabel('x')
-
-axis([x(1) 1 -.3 1.3])
-
-subplot(2,2,2)
-hold on
-
-for i = 1:dt_plot:length(t)
-    plot(x,U(i,xn+1:2*xn),'b')
-end
-
-xlabel('x')
-
-axis([x(1) 1 .9 1.1])
-
-subplot(2,2,3)
-hold on
-
-for i = 1:dt_plot:length(t)
-    plot(x,U(i,2*xn+1:3*xn),'b')
-end
-
-xlabel('x')
-
-axis([x(1) 1 -2 0])

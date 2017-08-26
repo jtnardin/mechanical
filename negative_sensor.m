@@ -19,14 +19,14 @@ function [r_e,r_w] = negative_sensor(u,int,int_row_nm1,step)
     r_w = (u(int) - u(int+step))./(u(int-step) - u(int));
     
     
-    %now remove interior points that will sample incorrectly before
-    %calculating r_w
-    int(int_row_nm1) = [];
+    %only consider the points that will sample correctly (which is anything
+    %not in the penultimate row)
+    int_before_row_1 = ~int_row_nm1;  
     
     
-    %For r_e, compute most points as normal (recall the problem points were
-    %removed from int)
-    r_e = (u(int+step) - u(int+2*step))./(u(int) - u(int+step));    
+    %For r_e, compute most points as normal
+    r_e(int_before_row_1) = (u(int(int_before_row_1)+step) - u(int(int_before_row_1)+2*step))./...
+        (u(int(int_before_row_1)) - u(int(int_before_row_1)+step));    
     
     %and now fix points that wound have sampled incorrectly
     %we are currently assuming a zero neumann BC
