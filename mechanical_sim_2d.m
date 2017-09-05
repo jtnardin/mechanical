@@ -11,7 +11,7 @@ y = linspace(0,1,yn);
 dx = x(2)-x(1);
 dy = y(2)-y(1);
 dt = 1e-3;
-t = 0:dt:1;
+t = 0:dt:0.1;
 tn = length(t);
 [Y,X] = meshgrid(y,x);
 
@@ -49,8 +49,8 @@ r0 = 1;
 mu1 = 1;
 mu2 = 1;
 tau = 1/2;
-E = 1;
-nu = .25;
+E = .1;
+nu = .4; %must be between -1 and 0.5
 gamma = 1;
 s = 1;
 D = 0.1;
@@ -59,7 +59,7 @@ q = [mu1,mu2,E,nu,s,tau,gamma,r0,D];
 
 %initial conditions
 
-nIC = .5*(1-tanh(25*(X-.2)));
+nIC = (.5*(1-tanh(25*(X-.2))));%.5*(1-tanh(25*(Y-.3)))
 nIC = nIC(:);
 rhoIC = 1*ones(size(X));%.6-.5*.8*tanh(25*(x-.2))';
 rhoIC = rhoIC(:);
@@ -86,8 +86,24 @@ D2X = @(ind,n) 1/dx^2*sparse([ind ind ind],...
     [ind+1 ind ind-1],...
     [ones(1,length(ind)) -2*ones(1,length(ind)) ones(1,length(ind))],n,n); %%-2 2 -2 2
 
+D2X0 = @(ind,n) 1/dx^2*sparse([ind ind],[ind+1 ind],...
+    [2*ones(1,length(ind)) -2*ones(1,length(ind))],n,n);
+
+D2XL = @(ind,n) 1/dx^2*sparse([ind ind],[ind-1 ind],...
+    [2*ones(1,length(ind)) -2*ones(1,length(ind))],n,n);
+
+
 D2Y = @(ind,n) 1/dy^2*sparse([ind ind ind],[ind+xn ind ind-xn],...
     [ones(1,length(ind)) -2*ones(1,length(ind)) ones(1,length(ind))],n,n); %%-2 2 -2 2
+
+
+D2Y0 = @(ind,n) 1/dy^2*sparse([ind ind],[ind+xn ind],[2*ones(1,length(ind))...
+    -2*ones(1,length(ind))],n,n); %%-2 2 -2 2
+
+
+D2YL = @(ind,n) 1/dy^2*sparse([ind ind],[ind-xn ind],[2*ones(1,length(ind))...
+    -2*ones(1,length(ind))],n,n); %%-2 2 -2 2
+
 
 D2XY = @(ind1,ind2,n) 1/(4*dx*dy)*sparse([ind1 ind1 ind1 ind1],...
     [ind2+xn+1 ind2+1-xn ind2-1+xn ind2-1-xn],...
@@ -128,9 +144,9 @@ A_neg_0 = @(se,ve,ind,dn) sparse([ind ind],[ind ind+dn],[ve.*se/2; (ve-ve.*se/2)
 
 tic
 
-[t,U] = ode15s(@(t,y) mechanical_ode_TM_base_2d(t,y,q,dx,dy,D1X,D1Y,D2X,D2Y,D2XY,...
-    D2bd_D,D2Xbd_N,D2Ybd_N,A_pos,A_pos_0,A_pos_1,A_neg,A_neg_0,A_neg_1,xy_int,bd,x_bd_0,x_bd_l,...
-    y_bd_0,y_bd_l,total,x_int,y_int,xn,yn),t,UIC);
+[t,U] = ode15s(@(t,y) mechanical_ode_TM_base_2d(t,y,q,dx,dy,D1X,D1Y,D2X,D2X0,...
+    D2XL,D2Y,D2Y0,D2YL,D2XY,D2bd_D,D2Xbd_N,D2Ybd_N,A_pos,A_pos_0,A_pos_1,A_neg,A_neg_0,A_neg_1,...
+    xy_int,x_bd_0,x_bd_l,y_bd_0,y_bd_l,total,x_int,y_int,xn,yn),t,UIC);
 
 toc
 
@@ -148,12 +164,74 @@ vx = diff(ux,1)/dt;
 vy = diff(uy,1)/dt;
 
 
+
+% %plot all quantities
+% figure('units','normalized','outerposition',[0 0 1 1])
+% 
+% for i = 1:10:tn-1
+%    subplot(2,2,1)
+% 
+%    
+%    hold off
+%    contourf(Y,X,squeeze(n(i,:,:)),'edgecolor','none')
+% %    view(2)
+%    xlabel('y')
+%    ylabel('x')
+%    title(['cells, t = ' num2str(t(i))])
+%    
+%    caxis([0 1])
+%    colorbar
+% 
+%    hold on
+%    
+%    quiver(Y,X,squeeze(vy(i,:,:)),squeeze(vx(i,:,:)),'linewidth',2,'color','r');
+%    
+%    subplot(2,2,2)
+%    
+%    contourf(Y,X,squeeze(rho(i,:,:)),'edgecolor','none')
+%    view(2)
+%    xlabel('y')
+%    ylabel('x')
+%    title(['collagen, t = ' num2str(t(i))])
+%    
+%    
+% %    caxis([min(min(min(rho))) max(max(max(rho)))]);
+%    colorbar
+%    
+%    subplot(2,2,3)
+%    
+%    contourf(Y,X,squeeze(ux(i,:,:)),'edgecolor','none')
+%    view(2)
+%    xlabel('y')
+%    ylabel('x')
+%    title(['ux, t = ' num2str(t(i))])
+%    
+%    
+%    caxis([min(min(min(ux))) max(max(max(ux)))]);
+%    colorbar
+%    
+%    subplot(2,2,4)
+%    
+%    contourf(Y,X,squeeze(uy(i,:,:)),'edgecolor','none')
+%    view(2)
+%    xlabel('y')
+%    ylabel('x')
+%    title(['uy, t = ' num2str(t(i))])
+%    
+%    
+%    caxis([min(min(min(uy))) max(max(max(uy)))]);
+%    colorbar
+%    
+%    pause(.125)
+%     
+% end
+
+%plot just cells
+
 figure('units','normalized','outerposition',[0 0 1 1])
 
 for i = 1:10:tn-1
-   subplot(2,2,1)
-
-   
+      
    hold off
    contourf(Y,X,squeeze(n(i,:,:)),'edgecolor','none')
 %    view(2)
@@ -167,42 +245,6 @@ for i = 1:10:tn-1
    hold on
    
    quiver(Y,X,squeeze(vy(i,:,:)),squeeze(vx(i,:,:)),'linewidth',2,'color','r');
-   
-   subplot(2,2,2)
-   
-   contourf(Y,X,squeeze(rho(i,:,:)),'edgecolor','none')
-   view(2)
-   xlabel('y')
-   ylabel('x')
-   title(['collagen, t = ' num2str(t(i))])
-   
-   
-%    caxis([min(min(min(rho))) max(max(max(rho)))]);
-   colorbar
-   
-   subplot(2,2,3)
-   
-   contourf(Y,X,squeeze(ux(i,:,:)),'edgecolor','none')
-   view(2)
-   xlabel('y')
-   ylabel('x')
-   title(['ux, t = ' num2str(t(i))])
-   
-   
-   caxis([min(min(min(ux))) max(max(max(ux)))]);
-   colorbar
-   
-   subplot(2,2,4)
-   
-   contourf(Y,X,squeeze(uy(i,:,:)),'edgecolor','none')
-   view(2)
-   xlabel('y')
-   ylabel('x')
-   title(['uy, t = ' num2str(t(i))])
-   
-   
-   caxis([min(min(min(uy))) max(max(max(uy)))]);
-   colorbar
    
    pause(.125)
     

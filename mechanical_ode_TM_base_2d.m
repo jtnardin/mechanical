@@ -1,8 +1,8 @@
-function yprime = mechanical_ode_TM_base_2d(t,y,q,dx,dy,D1X,D1Y,D2X,D2Y,D2XY,...
-    D2_bd_D,D2Xbd_N,D2Ybd_N,A_pos,A_pos_0,A_pos_1,A_neg,A_neg_0,A_neg_1,...
-    xy_int,bd,x_bd_0,x_bd_l,y_bd_0,y_bd_l,total,x_int,y_int,xn,yn)
+function yprime = mechanical_ode_TM_base_2d(t,y,q,dx,dy,D1X,D1Y,D2X,D2X0,...
+    D2XL,D2Y,D2Y0,D2YL,D2XY,D2_bd_D,D2Xbd_N,D2Ybd_N,A_pos,A_pos_0,A_pos_1,A_neg,A_neg_0,A_neg_1,...
+    xy_int,x_bd_0,x_bd_l,y_bd_0,y_bd_l,total,x_int,y_int,xn,yn)
 
-%       t
+      t
 
 
     x = linspace(-1,1,xn);
@@ -13,11 +13,12 @@ function yprime = mechanical_ode_TM_base_2d(t,y,q,dx,dy,D1X,D1Y,D2X,D2Y,D2XY,...
 
     n = y(1:total);
     rho = y(total+1:2*total);
-    u = y(2*total+1:3*total);
+    u = y(2*total+1:end);
     
     
     
-    v = velocity_solve(q,D1X,D1Y,D2X,D2Y,D2XY,D2_bd_D,n,rho,repmat(u,2,1),xy_int,bd,total);
+    v = velocity_solve(q,D1X,D1Y,D2X,D2X0,D2XL,D2Y,D2Y0,D2YL,D2XY,n,...
+    rho,u,xy_int,x_int,y_int,x_bd_0,x_bd_l,y_bd_0,y_bd_l,total);
     
     
     vx = v(1:total);
