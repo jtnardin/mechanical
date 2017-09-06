@@ -1,5 +1,8 @@
 clear all; clc
 
+%boundary conditions or not?
+sim_type = 'no_BC'; %'BC'
+
 %define grids
 xn = 21;
 yn = 21;
@@ -11,7 +14,7 @@ y = linspace(0,1,yn);
 dx = x(2)-x(1);
 dy = y(2)-y(1);
 dt = 1e-3;
-t = 0:dt:0.1;
+t = 0:dt:10;
 tn = length(t);
 [Y,X] = meshgrid(y,x);
 
@@ -48,12 +51,12 @@ xy_int(bd) = [];
 r0 = 1;
 mu1 = 1;
 mu2 = 1;
-tau = 1/2;
-E = .1;
-nu = .4; %must be between -1 and 0.5
+tau = 1;
+E = 1;
+nu = 0.1; %must be between -1 and 0.5
 gamma = 1;
 s = 1;
-D = 0.1;
+D = 1e-2;
 
 q = [mu1,mu2,E,nu,s,tau,gamma,r0,D];
 
@@ -144,9 +147,22 @@ A_neg_0 = @(se,ve,ind,dn) sparse([ind ind],[ind ind+dn],[ve.*se/2; (ve-ve.*se/2)
 
 tic
 
-[t,U] = ode15s(@(t,y) mechanical_ode_TM_base_2d(t,y,q,dx,dy,D1X,D1Y,D2X,D2X0,...
-    D2XL,D2Y,D2Y0,D2YL,D2XY,D2bd_D,D2Xbd_N,D2Ybd_N,A_pos,A_pos_0,A_pos_1,A_neg,A_neg_0,A_neg_1,...
-    xy_int,x_bd_0,x_bd_l,y_bd_0,y_bd_l,total,x_int,y_int,xn,yn),t,UIC);
+switch sim_type
+    
+    case 'no_BC'
+        
+        [t,U] = ode45(@(t,y) mechanical_ode_TM_base_2d_no_BC(t,y,q,dx,dy,...
+            D1X,D1Y,D2X,D2X0,D2XL,D2Y,D2Y0,D2YL,D2XY,D2bd_D,D2Xbd_N,...
+            D2Ybd_N,A_pos,A_pos_0,A_pos_1,A_neg,A_neg_0,A_neg_1,xy_int,...
+            bd,x_bd_0,x_bd_l,y_bd_0,y_bd_l,total,x_int,y_int,...
+            xn,yn),t,UIC);
+        
+    case 'BC'
+
+        [t,U] = ode45(@(t,y) mechanical_ode_TM_base_2d(t,y,q,dx,dy,D1X,D1Y,D2X,D2X0,...
+            D2XL,D2Y,D2Y0,D2YL,D2XY,D2bd_D,D2Xbd_N,D2Ybd_N,A_pos,A_pos_0,A_pos_1,A_neg,A_neg_0,A_neg_1,...
+            xy_int,x_bd_0,x_bd_l,y_bd_0,y_bd_l,total,x_int,y_int,xn,yn),t,UIC);
+end
 
 toc
 
@@ -168,7 +184,7 @@ vy = diff(uy,1)/dt;
 % %plot all quantities
 % figure('units','normalized','outerposition',[0 0 1 1])
 % 
-% for i = 1:10:tn-1
+% for i = 1:100:tn-1
 %    subplot(2,2,1)
 % 
 %    
@@ -230,7 +246,7 @@ vy = diff(uy,1)/dt;
 
 figure('units','normalized','outerposition',[0 0 1 1])
 
-for i = 1:10:tn-1
+for i = 1:100:tn-1
       
    hold off
    contourf(Y,X,squeeze(n(i,:,:)),'edgecolor','none')
